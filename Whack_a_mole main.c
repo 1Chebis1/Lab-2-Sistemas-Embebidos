@@ -6,21 +6,19 @@
 #include "driver/gpio.h"
 #include "esp_timer.h"
 #include "esp_random.h"
-#include "esp_rom_sys.h" // For esp_rom_delay_us
+#include "esp_rom_sys.h" 
 
-// --- PIN DEFINITIONS ---
+// Define pins
 const gpio_num_t colPins[6]      = {GPIO_NUM_16, GPIO_NUM_14, GPIO_NUM_13, GPIO_NUM_17, GPIO_NUM_18, GPIO_NUM_19}; 
 const gpio_num_t redRowPins[6]   = {GPIO_NUM_21, GPIO_NUM_22, GPIO_NUM_23, GPIO_NUM_25, GPIO_NUM_26, GPIO_NUM_27}; 
 const gpio_num_t greenRowPins[6] = {GPIO_NUM_2,  GPIO_NUM_4,  GPIO_NUM_5,  GPIO_NUM_12, GPIO_NUM_32, GPIO_NUM_33}; 
 
-// Buttons (External Pull-ups: 0 = Pressed)
-const gpio_num_t btnPins[4] = {GPIO_NUM_34, GPIO_NUM_35, GPIO_NUM_39, GPIO_NUM_36}; // 0:TL, 1:TR, 2:BL, 3:BR
 
-// --- DISPLAY BUFFERS ---
+const gpio_num_t btnPins[4] = {GPIO_NUM_34, GPIO_NUM_35, GPIO_NUM_39, GPIO_NUM_36}; // 0:Arriba Izq, 1:Arriba Der, 2:Abajo Izq, 3:Abajo Der
 volatile bool redMatrix[6][6] = {false};
 volatile bool greenMatrix[6][6] = {false};
 
-// --- GAME VARIABLES ---
+// Variable de juego
 int currentQuadrant = -1;
 int moleCol = 0;
 int moleRow = 0;
@@ -33,14 +31,11 @@ const uint32_t speedIncrement = 150;
 typedef enum { SPAWN, PLAYING, HIT, GAME_OVER } GameState;
 GameState state = SPAWN;
 
-// --- HELPER FUNCTIONS ---
-
-// Replaces Arduino's millis()
 uint32_t get_millis() {
     return (uint32_t)(esp_timer_get_time() / 1000ULL);
 }
 
-// Replaces Arduino's random(min, max)
+// Random
 int get_random(int min, int max) {
     return min + (esp_random() % (max - min));
 }
@@ -75,7 +70,7 @@ void setMoleColor(bool isGreen) {
     greenMatrix[moleCol + 1][moleRow + 1] = isGreen;
 }
 
-// --- HARDWARE INIT ---
+// INIT
 void init_hardware() {
     // Initialize output pins
     for (int i = 0; i < 6; i++) {
@@ -92,15 +87,15 @@ void init_hardware() {
         gpio_set_level(greenRowPins[i], 0);
     }
 
-    // Initialize input pins
+    // Init entradas
     for (int i = 0; i < 4; i++) {
         gpio_reset_pin(btnPins[i]);
         gpio_set_direction(btnPins[i], GPIO_MODE_INPUT);
-        // We do not enable internal pullups because you have external ones
+        //Sin pullups porque los pines no tienen
     }
 }
 
-// --- DISPLAY MULTIPLEXING TASK (Core 0) ---
+//Multiplexor
 void display_task(void * pvParameters) {
     while(1) {
         for (int col = 0; col < 6; col++) {
@@ -124,7 +119,6 @@ void display_task(void * pvParameters) {
     }
 }
 
-// --- MAIN APPLICATION ENTRY POINT (Core 1) ---
 void app_main() {
     init_hardware();
 
@@ -132,14 +126,13 @@ void app_main() {
     xTaskCreatePinnedToCore(
         display_task,   
         "DisplayTask",  
-        4096,           // Stack size in words (not bytes in vanilla FreeRTOS)
+        4096,           
         NULL,           
         1,              
         NULL,           
         0               
     );
 
-    // Main Game Loop
     while (1) {
         switch (state) {
             
